@@ -1,0 +1,115 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  STUDENT
+  COORDINATION
+}
+
+enum ApplicationStatus {
+  PEND_EVAL
+  APPROVED
+  REJECTED
+}
+
+enum PracticeType {
+  INTERNAL
+  EXTERNAL
+}
+
+model User {
+  id        Int       @id @default(autoincrement())
+  name      String
+  email     String    @unique
+  password  String
+  role      Role
+  createdAt DateTime  @default(now())
+
+  student   Student?
+}
+
+model Student {
+  id        Int       @id @default(autoincrement())
+  rut       String    @unique
+  career    String
+  userId    Int       @unique
+
+  user      User      @relation(fields: [userId], references: [id])
+  applications     Application[]
+  practiceRequests PracticeRequest[]
+  practices        Practice[]
+}
+
+model Evaluator {
+  id        Int       @id @default(autoincrement())
+  name      String
+  email     String    @unique
+  practices Practice[]
+}
+
+model Offer {
+  id          Int          @id @default(autoincrement())
+  title       String
+  company     String
+  location    String
+  hours       Int
+  modality    String
+  details     String
+  deadline    DateTime?
+  startDate   DateTime?
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+
+  applications Application[]
+}
+
+model Application {
+  id        Int               @id @default(autoincrement())
+  studentId Int
+  offerId   Int
+  status    ApplicationStatus @default(PEND_EVAL)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  student   Student           @relation(fields: [studentId], references: [id])
+  offer     Offer             @relation(fields: [offerId], references: [id])
+}
+
+model PracticeRequest {
+  id          Int               @id @default(autoincrement())
+  studentId   Int
+  companyName String
+  tutorName   String
+  tutorEmail  String
+  startDate   DateTime
+  endDate     DateTime
+  details     String?
+  status      ApplicationStatus @default(PEND_EVAL)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  student     Student           @relation(fields: [studentId], references: [id])
+}
+
+model Practice {
+  id          Int          @id @default(autoincrement())
+  studentId   Int
+  type        PracticeType
+  company     String
+  startDate   DateTime
+  endDate     DateTime
+  hours       Int?
+  status      String       @default("OPEN")
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  student     Student      @relation(fields: [studentId], references: [id])
+  evaluatorId Int?
+  evaluator   Evaluator?   @relation(fields: [evaluatorId], references: [id])
+}
