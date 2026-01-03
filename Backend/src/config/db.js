@@ -9,10 +9,6 @@ const pool = new Pool({
   database: process.env.DB_NAME,
 });
 
-pool.on("connect", () => {
-  console.log("✅ Conectado a PostgreSQL");
-});
-
 pool.on("error", (err) => {
   console.error("❌ Error inesperado en PostgreSQL:", err);
   process.exit(1);
