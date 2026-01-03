@@ -8,9 +8,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-/**
- * Notifica al evaluador cuando se le asigna un alumno
- */
+//Notifica al evaluador cuando se le asigna un alumno
 async function sendAssignmentEmail(evaluatorEmail, evaluatorName, studentName, company) {
   try {
     await transporter.sendMail({

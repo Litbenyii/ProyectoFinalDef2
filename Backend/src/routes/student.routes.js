@@ -1,3 +1,5 @@
+const pool = require("../config/db");
+
 const express = require("express");
 const multer = require("multer");
 const upload = multer({ dest: "uploads/" });
@@ -26,27 +28,34 @@ router.post("/applications/:offerId", createApplicationController);
 router.post("/my/logbooks", upload.single("logbook"), async (req, res) => {
   try {
     const { practiceId, description } = req.body;
-    const userId = req.user.id; // ID que viene del token
+    const userId = req.user.id;
 
-    // Buscamos al estudiante por su user_id
-    const studentQuery = await pool.query("SELECT id FROM students WHERE user_id = $1", [userId]);
-    const student = studentQuery.rows[0];
+    const studentRes = await pool.query(
+      "SELECT id FROM students WHERE user_id = $1",
+      [userId]
+    );
 
-    if (!student) {
+    if (studentRes.rows.length === 0) {
       return res.status(404).json({ message: "Estudiante no encontrado" });
     }
 
-    // Insertamos la bitácora
-    // IMPORTANTE: Asegúrate de que la tabla 'logbooks' acepte el ID que estás mandando
     await pool.query(
-      "INSERT INTO logbooks (student_id, practice_id, file_path, description) VALUES ($1, $2, $3, $4)",
-      [student.id, practiceId, req.file.path, description]
+      `
+      INSERT INTO logbooks (student_id, practice_id, file_path, description)
+      VALUES ($1, $2, $3, $4)
+      `,
+      [
+        studentRes.rows[0].id,
+        practiceId,
+        req.file.path,
+        description || null,
+      ]
     );
 
     res.json({ message: "Bitácora subida con éxito" });
   } catch (e) {
-    console.error("ERROR CRITICO DB:", e.message); // Esto te dirá el error real en la terminal
-    res.status(500).json({ message: "Error interno: " + e.message });
+    console.error(e);
+    res.status(500).json({ message: "Error al subir bitácora" });
   }
 });
 

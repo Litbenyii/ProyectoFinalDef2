@@ -9,6 +9,13 @@ const pool = new Pool({
   database: process.env.DB_NAME,
 });
 
-module.exports = {
-  query: (text, params) => pool.query(text, params),
-};
+pool.on("connect", () => {
+  console.log("✅ Conectado a PostgreSQL");
+});
+
+pool.on("error", (err) => {
+  console.error("❌ Error inesperado en PostgreSQL:", err);
+  process.exit(1);
+});
+
+module.exports = pool;

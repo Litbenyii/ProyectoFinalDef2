@@ -21,9 +21,7 @@ function App() {
     return localStorage.getItem("token");
   });
 
-  // ===============================
-  // LOGIN
-  // ===============================
+  //LOGIN
   const handleLogin = (data) => {
     const { user, token } = data;
 
@@ -34,9 +32,7 @@ function App() {
     localStorage.setItem("token", token);
   };
 
-  // ===============================
-  // LOGOUT
-  // ===============================
+  //LOGOUT
   const handleLogout = () => {
     localStorage.removeItem("user");
     localStorage.removeItem("token");
@@ -44,9 +40,7 @@ function App() {
     setToken(null);
   };
 
-  // ===============================
-  // PREVIEW (solo si lo activas)
-  // ===============================
+  //PREVIEW (solo si lo activas)
   const previewUser = {
     email: "admin@preview.cl",
     role: "COORDINATION",
@@ -57,9 +51,7 @@ function App() {
   const activeUser = PREVIEW_MODE ? previewUser : user;
   const activeToken = PREVIEW_MODE ? previewToken : token;
 
-  // ===============================
-  // RENDER
-  // ===============================
+  //RENDER
 
   // No autenticado
   if (!activeUser) {

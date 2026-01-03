@@ -119,7 +119,7 @@ export default function StudentHome({ name, onLogout, token }) {
     }
   };
 
-  // 🔥 NUEVA FUNCIÓN: Subir Bitácora
+  //NUEVA FUNCIÓN: Subir Bitácora
   const handleLogbookUpload = async (practiceId) => {
     if (!logbookFile) {
       setError("Por favor, selecciona un archivo primero.");
@@ -343,7 +343,7 @@ export default function StudentHome({ name, onLogout, token }) {
                     </span>
                   </div>
 
-                  {/* 🔥 SECCIÓN DE BITÁCORA (Solo si está aprobada) */}
+                  {/* SECCIÓN DE BITÁCORA (Solo si está aprobada) */}
                   {r.status === 'Aprobada' && (
                     <div className="p-4 bg-white space-y-3">
                       <div className="flex items-center gap-2 text-blue-700 bg-blue-50 p-2 rounded text-xs font-medium">

@@ -19,20 +19,18 @@ function authMiddleware(req, res, next) {
 
     next();
   } catch (error) {
-    console.error("Error en authMiddleware:", error);
+    console.error("❌ Error en authMiddleware:", error.message);
     return res.status(401).json({ message: "Token inválido o expirado" });
   }
 }
 
-// ✅ SOLO COORDINACIÓN
+// SOLO COORDINACIÓN
 function requireCoordination(req, res, next) {
   if (!req.user) {
     return res.status(401).json({ message: "No autenticado" });
   }
 
-  const role = (req.user.role || "").toUpperCase();
-
-  if (role !== "COORDINATION") {
+  if (req.user.role !== "COORDINATION") {
     return res.status(403).json({
       message: "Acceso restringido a coordinación",
     });
@@ -41,15 +39,13 @@ function requireCoordination(req, res, next) {
   next();
 }
 
-// ✅ SOLO ESTUDIANTE
+// SOLO ESTUDIANTE
 function requireStudent(req, res, next) {
   if (!req.user) {
     return res.status(401).json({ message: "No autenticado" });
   }
 
-  const role = (req.user.role || "").toUpperCase();
-
-  if (role !== "STUDENT") {
+  if (req.user.role !== "STUDENT") {
     return res.status(403).json({
       message: "Acceso restringido a estudiantes",
     });

@@ -1,12 +1,14 @@
-const db = require("../config/db");
+const pool = require("../config/db");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
-/**
- * LOGIN
- */
+//LOGIN
 async function login(email, password) {
-  const result = await db.query(
+  if (!email || !password) {
+    throw new Error("Email y contraseña son obligatorios");
+  }
+
+  const result = await pool.query(
     "SELECT id, email, password, role FROM users WHERE email = $1",
     [email]
   );
@@ -42,9 +44,7 @@ async function login(email, password) {
   };
 }
 
-/**
- * VERIFY TOKEN (🔥 ESTA ERA LA FUNCIÓN FALTANTE)
- */
+//VERIFY TOKEN
 function verifyToken(token) {
   return jwt.verify(token, process.env.JWT_SECRET);
 }

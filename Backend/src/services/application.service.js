@@ -1,11 +1,12 @@
 const pool = require("../config/db");
 
+// Verificar si el alumno ya tiene algo en curso
 async function hasActiveProcess(studentId) {
   const result = await pool.query(
     `
-    SELECT id FROM applications WHERE student_id = $1 AND status != 'Rechazada'
+    SELECT id FROM applications WHERE student_id = $1 AND status = 'Pendiente'
     UNION
-    SELECT id FROM practice_requests WHERE student_id = $1 AND status != 'Rechazada'
+    SELECT id FROM practice_requests WHERE student_id = $1 AND status = 'Pendiente'
     LIMIT 1
     `,
     [studentId]
@@ -13,19 +14,13 @@ async function hasActiveProcess(studentId) {
   return result.rows.length > 0;
 }
 
-//Crear postulación a una oferta (solo una vez)
+// Crear postulación interna
 async function createApplication(studentId, offerId) {
-  if (!studentId || !offerId) {
-    throw new Error("Faltan datos para postular");
+  const busy = await hasActiveProcess(studentId);
+  if (busy) {
+    throw new Error("Ya tienes una postulación o solicitud en curso");
   }
 
-  //Verificar si ya existe postulacion
-  const alreadyBusy = await hasActiveProcess(studentId);
-  if (alreadyBusy) {
-    throw new Error("Ya tienes una postulación o solicitud en curso.");
-  }
-
-  //Crear postulacion
   const result = await pool.query(
     `
     INSERT INTO applications (student_id, offer_id, status)
@@ -38,20 +33,17 @@ async function createApplication(studentId, offerId) {
   return result.rows[0];
 }
 
-//Obtener mis solicitudes y postulaciones
+// Obtener solicitudes del alumno
 async function getMyRequests(studentId) {
-  // Postulaciones internas
-  const applicationsResult = await pool.query(
+  const internal = await pool.query(
     `
     SELECT
       a.id,
       'INTERNAL' AS type,
-      a.status,
-      a.created_at,
       o.title AS "offerTitle",
       o.company,
-      NULL::date AS "startDate",
-      NULL::date AS "endDate"
+      a.status,
+      a.created_at
     FROM applications a
     JOIN offers o ON a.offer_id = o.id
     WHERE a.student_id = $1
@@ -59,63 +51,47 @@ async function getMyRequests(studentId) {
     [studentId]
   );
 
-  //Practicas externas
-  const practicesResult = await pool.query(
+  const external = await pool.query(
     `
     SELECT
       pr.id,
       'EXTERNAL' AS type,
-      pr.status,
-      pr.created_at,
-      NULL AS "offerTitle",
       pr.company,
-      pr.start_date AS "startDate",
-      pr.end_date AS "endDate"
+      pr.status,
+      pr.created_at
     FROM practice_requests pr
     WHERE pr.student_id = $1
     `,
     [studentId]
   );
 
-  // Unificar como hacia pgadmin
-    const merged = [
-      ...applicationsResult.rows,
-      ...practicesResult.rows,
-    ];
-
-    // Ordenar por fecha
-    merged.sort(
-      (a, b) => new Date(b.created_at) - new Date(a.created_at)
-    );
-
-  return merged;
+  return [...internal.rows, ...external.rows].sort(
+    (a, b) => new Date(b.created_at) - new Date(a.created_at)
+  );
 }
 
-//Obtener todas las postulaciones (coordinador)  
+// Coordinación: ver postulaciones internas
 async function getCoordinatorApplications() {
   const result = await pool.query(
     `
     SELECT
-      a.*,
+      a.id,
+      a.status,
       s.full_name,
-      u.email,
       o.title,
       o.company
     FROM applications a
     JOIN students s ON a.student_id = s.id
-    JOIN users u ON s.user_id = u.id
     JOIN offers o ON a.offer_id = o.id
     ORDER BY a.created_at DESC
     `
   );
-
   return result.rows;
 }
 
-//Actualizar estado de postulación
+// Aprobar / rechazar postulación
 async function updateApplicationStatus(id, status) {
-  const allowed = ["Pendiente", "Aprobada", "Rechazada"];
-  if (!allowed.includes(status)) {
+  if (!["Aprobada", "Rechazada"].includes(status)) {
     throw new Error("Estado inválido");
   }
 

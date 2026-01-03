@@ -1,74 +1,70 @@
 const pool = require("../config/db");
 
-//Crear solicitud de práctica externa
-async function createPracticeRequest(studentId, payload) {
+//ESTUDIANTE – SOLICITUD EXTERNA
+async function createPracticeRequest(studentId, data) {
   const {
     company,
     tutorName,
     tutorEmail,
     startDate,
     endDate,
-    details,
     location,
     modality,
-  } = payload;
+    details,
+  } = data;
 
-  if (!studentId || !company || !tutorName || !tutorEmail) {
-    throw new Error("Faltan datos obligatorios de la solicitud");
+  if (!company || !tutorName || !tutorEmail) {
+    throw new Error("Faltan datos obligatorios");
   }
-
-  const mergedDetails =
-    `Ubicación: ${location || "No indicada"}\n` +
-    `Modalidad: ${modality || "No indicada"}\n\n` +
-    (details || "");
 
   const result = await pool.query(
     `
     INSERT INTO practice_requests
-      (student_id, company, tutor_name, tutor_email, start_date, end_date, details, status, location, modality, merged_details)
+      (student_id, company, tutor_name, tutor_email, start_date, end_date, location, modality, details)
     VALUES
-      ($1, $2, $3, $4, $5, $6, $7, 'Pendiente', $8, $9, $10)
+      ($1,$2,$3,$4,$5,$6,$7,$8,$9)
     RETURNING *
     `,
     [
-      studentId,           // $1
-      company,             // $2
-      tutorName,           // $3
-      tutorEmail,          // $4
-      startDate || null,   // $5
-      endDate || null,     // $6
-      details || "",       // $7
-      location || null,    // $8
-      modality || null,    // $9
-      mergedDetails,      // $10
+      studentId,
+      company,
+      tutorName,
+      tutorEmail,
+      startDate || null,
+      endDate || null,
+      location || null,
+      modality || null,
+      details || "",
     ]
   );
 
   return result.rows[0];
 }
 
-//Obtener solicitudes de práctica (coordinador)
+//COORDINACIÓN – SOLICITUDES
 async function getCoordinatorPracticeRequests() {
-  const result = await pool.query(
+  const res = await pool.query(
     `
     SELECT
-      pr.*,
+      pr.id,
+      pr.company,
+      pr.status,
       s.full_name,
-      s.career,
-      u.email
+      s.id AS student_id
     FROM practice_requests pr
     JOIN students s ON pr.student_id = s.id
-    JOIN users u ON s.user_id = u.id
     ORDER BY pr.created_at DESC
     `
   );
-
-  return result.rows;
+  return res.rows;
 }
 
-//Actualizar estado de solicitud
 async function updatePracticeRequestStatus(id, status) {
-  const result = await pool.query(
+  if (!["Aprobada", "Rechazada"].includes(status)) {
+    throw new Error("Estado inválido");
+  }
+
+  const reqRes = await pool.query(
     `
     UPDATE practice_requests
     SET status = $1
@@ -78,60 +74,54 @@ async function updatePracticeRequestStatus(id, status) {
     [status, id]
   );
 
-  return result.rows[0];
+  const request = reqRes.rows[0];
+
+  //Al aprobar → crear práctica
+  if (status === "Aprobada") {
+    await pool.query(
+      `
+      INSERT INTO practices (student_id, company, practice_request_id)
+      VALUES ($1, $2, $3)
+      `,
+      [request.student_id, request.company, request.id]
+    );
+  }
+
+  return request;
 }
 
-//Obtener prácticas (todas)
-async function getPractices() {
-  const result = await pool.query(
+//PRÁCTICAS
+async function getOpenPractices() {
+  const res = await pool.query(
     `
     SELECT
-      p.*,
-      s.full_name,
-      u.email,
-      e.name AS evaluator_name
+      p.id,
+      p.company,
+      s.full_name AS student_name
     FROM practices p
     JOIN students s ON p.student_id = s.id
-    JOIN users u ON s.user_id = u.id
-    LEFT JOIN evaluators e ON p.approved_by = e.id
+    WHERE p.evaluator_id IS NULL
     ORDER BY p.created_at DESC
     `
   );
-
-  return result.rows;
+  return res.rows;
 }
 
-//Listar evaluadores
-async function getEvaluators() {
-  const result = await pool.query(
-    `
-    SELECT *
-    FROM evaluators
-    ORDER BY name ASC
-    `
-  );
-
-  return result.rows;
-}
-
-//Asignar evaluador a práctica
 async function assignEvaluatorToPractice(practiceId, evaluatorId) {
-  const result = await pool.query(
+  const res = await pool.query(
     `
     UPDATE practices
-    SET approved_by = $1
+    SET evaluator_id = $1
     WHERE id = $2
     RETURNING *
     `,
     [evaluatorId, practiceId]
   );
-
-  return result.rows[0];
+  return res.rows[0];
 }
 
-//Cerrar práctica
 async function closePractice(practiceId) {
-  const result = await pool.query(
+  const res = await pool.query(
     `
     UPDATE practices
     SET end_date = CURRENT_DATE
@@ -140,37 +130,44 @@ async function closePractice(practiceId) {
     `,
     [practiceId]
   );
-
-  return result.rows[0];
+  return res.rows[0];
 }
 
-async function getOpenPractices() {
-  const result = await pool.query(`
-    SELECT *
-    FROM practices
-    WHERE approved_by IS NULL
-    ORDER BY created_at DESC
-  `);
-  return result.rows;
+//EVALUADORES
+async function getEvaluators() {
+  const res = await pool.query(
+    "SELECT * FROM evaluators ORDER BY name"
+  );
+  return res.rows;
 }
 
 async function createEvaluator(data) {
   const { name, email, specialty } = data;
-  const result = await pool.query(
-    `INSERT INTO evaluators (name, email, specialty) VALUES ($1, $2, $3) RETURNING *`,
+  if (!name || !email) throw new Error("Datos incompletos");
+
+  const res = await pool.query(
+    `
+    INSERT INTO evaluators (name, email, specialty)
+    VALUES ($1,$2,$3)
+    RETURNING *
+    `,
     [name, email, specialty || "General"]
   );
-  return result.rows[0];
+
+  return res.rows[0];
 }
 
+// ✅ EXPORTS CORRECTOS
 module.exports = {
+  // estudiante
   createPracticeRequest,
+
+  // coordinación
   getCoordinatorPracticeRequests,
   updatePracticeRequestStatus,
-  getPractices,
-  getOpenPractices, 
-  getEvaluators,
+  getOpenPractices,
   assignEvaluatorToPractice,
   closePractice,
+  getEvaluators,
   createEvaluator,
 };
