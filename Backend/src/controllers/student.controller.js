@@ -43,21 +43,74 @@ async function createApplicationController(req, res) {
 }
 
 async function createPracticeRequestController(req, res) {
-  const student = await getStudentByUserId(req.user.id);
-  if (await hasActivePractice(student.id)) {
-    return res.status(400).json({
-      message: "Ya tienes una práctica activa. No puedes registrar otra solicitud.",
-    });
-  }
+  try {
+    const student = await getStudentByUserId(req.user.id);
 
-  // ✅ Regla 2: si ya tiene una solicitud externa pendiente, no puede crear otra
-  if (await hasPendingExternalRequest(student.id)) {
-    return res.status(400).json({
-      message: "Ya tienes una solicitud externa pendiente. Espera a que sea revisada.",
+    const {
+      company,
+      tutorName,
+      tutorEmail,
+      startDate,
+      endDate,
+      details,
+      location,
+      modality,
+    } = req.body;
+
+    // VALIDACIÓN 1: campos obligatorios
+    if (!company || !tutorName || !tutorEmail) {
+      return res.status(400).json({
+        message: "Empresa, tutor y correo del tutor son obligatorios.",
+      });
+    }
+
+    // VALIDACIÓN 2: formato email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(tutorEmail)) {
+      return res.status(400).json({
+        message: "El correo del tutor no tiene un formato válido.",
+      });
+    }
+
+    // VALIDACIÓN 3: fechas coherentes
+    if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
+      return res.status(400).json({
+        message: "La fecha de inicio no puede ser posterior a la de término.",
+      });
+    }
+
+    // VALIDACIÓN 4: no más de una práctica activa
+    if (await hasActivePractice(student.id)) {
+      return res.status(400).json({
+        message: "Ya tienes una práctica activa.",
+      });
+    }
+
+    // VALIDACIÓN 5: no más de una solicitud externa pendiente
+    if (await hasPendingExternalRequest(student.id)) {
+      return res.status(400).json({
+        message: "Ya tienes una solicitud externa pendiente.",
+      });
+    }
+
+    const created = await createPracticeRequest(student.id, {
+      company,
+      tutorName,
+      tutorEmail,
+      startDate: startDate || null,
+      endDate: endDate || null,
+      details: details || "",
+      location: location || null,
+      modality: modality || null,
+    });
+
+    res.status(201).json(created);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      message: "Error al crear solicitud de práctica externa",
     });
   }
-  const created = await createPracticeRequest(student.id, req.body);
-  res.status(201).json(created);
 }
 
 module.exports = {

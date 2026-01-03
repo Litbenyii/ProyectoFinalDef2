@@ -30,6 +30,14 @@ router.post("/my/logbooks", upload.single("logbook"), async (req, res) => {
     const { practiceId, description } = req.body;
     const userId = req.user.id;
 
+      if (!practiceId) {
+        return res.status(400).json({ message: "practiceId es obligatorio" });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ message: "Debe adjuntar un archivo" });
+      }
+
     // 1️⃣ Obtener estudiante
     const studentRes = await pool.query(
       "SELECT id, full_name FROM students WHERE user_id = $1",
