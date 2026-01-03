@@ -1,52 +1,49 @@
 const express = require("express");
+const router = express.Router();
 const {
   listExternalRequests,
-  approvePracticeRequestController,
-  rejectPracticeRequestController,
+  approvePracticeRequest,
+  rejectPracticeRequest,
   listOffersController,
   createOfferController,
   deactivateOfferController,
-  listApplicationsController,
-  approveApplicationController,
-  rejectApplicationController,
+  getCoordinatorApplications,
+  approveApplication,
+  rejectApplication,
   createStudentController,
-  listEvaluatorsController,
-  listOpenPracticesController,
-  assignEvaluatorController,
-  closePracticeController,
+  getEvaluators,
+  getOpenPractices,
+  assignEvaluatorToPractice,
+  finalizePractice,
+  createEvaluatorController,
 } = require("../controllers/coordination.controller");
-const {
-  authMiddleware,
-  requireCoordination,
-} = require("../middleware/auth");
-
-const router = express.Router();
-
+const { authMiddleware, requireCoordination } = require("../middleware/auth");
 
 router.use(authMiddleware, requireCoordination);
 
-// Solicitudes externas
+// solicitudes externas
 router.get("/external-requests", listExternalRequests);
-router.post("/external-requests/:id/approve", approvePracticeRequestController);
-router.post("/external-requests/:id/reject", rejectPracticeRequestController);
+router.post("/external-requests/:id/approve", approvePracticeRequest);
+router.post("/external-requests/:id/reject", rejectPracticeRequest);
 
-// Ofertas
+// ofertas de practica
 router.get("/offers", listOffersController);
 router.post("/offers", createOfferController);
 router.post("/offers/:id/deactivate", deactivateOfferController);
 
-// Postulaciones
-router.get("/applications", listApplicationsController);
-router.post("/applications/:id/approve", approveApplicationController);
-router.post("/applications/:id/reject", rejectApplicationController);
+// postulaciones
+router.get("/applications", getCoordinatorApplications);
+router.post("/applications/:id/approve", approveApplication);
+router.post("/applications/:id/reject", rejectApplication);
 
-// Estudiantes
+// crear estudiante
 router.post("/students", createStudentController);
 
-// Evaluadores / prácticas
-router.get("/evaluators", listEvaluatorsController);
-router.get("/practices/open", listOpenPracticesController);
-router.post("/practices/:id/assign", assignEvaluatorController);
-router.post("/practices/:id/close", closePracticeController);
+// evaluadores y prácticas
+router.get("/evaluators", getEvaluators);
+router.get("/practices/open", getOpenPractices);
+router.post("/practices/:id/assign", assignEvaluatorToPractice);
+router.post("/practices/:id/close", finalizePractice);
+router.post("/evaluators", createEvaluatorController);
 
 module.exports = router;

@@ -1,5 +1,8 @@
 const API_URL = "http://localhost:4000";
 
+/**
+ * Helper genérico para peticiones fetch
+ */
 async function request(path, options = {}) {
   const { headers, ...rest } = options;
 
@@ -19,23 +22,13 @@ async function request(path, options = {}) {
       data = await res.json();
       msg = data.message || data.error || msg;
     } catch (e) {
-
+      // Error silencioso si no es JSON
     }
 
-    // Sesión expirada
     if (res.status === 401) {
-      try {
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-      } catch (_) {}
-
-      if (!data?.message && !data?.error) {
-        msg = "Tu sesión ha expirado. Vuelve a iniciar sesión.";
-      }
-
-      if (typeof window !== "undefined" && window.location.pathname !== "/") {
-        window.location.href = "/";
-      }
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      if (typeof window !== "undefined") window.location.href = "/";
     }
 
     throw new Error(msg);
@@ -45,152 +38,91 @@ async function request(path, options = {}) {
   return res.json();
 }
 
-//auth
+// --- AUTH ---
+export const login = (email, password) => 
+  request("/api/auth/login", { method: "POST", body: JSON.stringify({ email, password }) });
 
-export async function login(email, password) {
-  return request("/api/auth/login", {
-    method: "POST",
-    body: JSON.stringify({ email, password }),
-  });
-}
+// --- ESTUDIANTE ---
+export const getOffers = (token) => 
+  request("/api/student/offers", { headers: { Authorization: `Bearer ${token}` } });
 
-//estudiante: ofertas y solicitudes
+export const getMyRequests = (token) => 
+  request("/api/student/my/requests", { headers: { Authorization: `Bearer ${token}` } });
 
-export async function getOffers(token) {
-  return request("/api/student/offers", {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-}
-
-export async function getMyRequests(token) {
-  return request("/api/student/my/requests", {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-}
-
-export async function createPracticeRequest(token, payload) {
-  return request("/api/student/practice-requests", {
+export const createPracticeRequest = (token, data) => 
+  request("/api/student/practice-requests", {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(data),
   });
-}
 
-export async function createApplication(token, offerId) {
-  return request(`/api/student/applications/${offerId}`, {
+export const createApplication = (token, offerId) => 
+  request(`/api/student/applications/${offerId}`, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },
   });
-}
 
-//coordinacion: solicitudes externas
+// --- COORDINACIÓN: SOLICITUDES Y POSTULACIONES ---
+export const getCoordinatorPracticeRequests = (token) => 
+  request("/api/coord/external-requests", { headers: { Authorization: `Bearer ${token}` } });
 
-export async function getCoordinatorPracticeRequests(token) {
-  return request("/api/coord/external-requests", {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-}
+export const approvePracticeRequest = (token, id) => 
+  request(`/api/coord/external-requests/${id}/approve`, { method: "POST", headers: { Authorization: `Bearer ${token}` } });
 
-export async function approvePracticeRequest(token, id) {
-  return request(`/api/coord/external-requests/${id}/approve`, {
+export const rejectPracticeRequest = (token, id) => 
+  request(`/api/coord/external-requests/${id}/reject`, { method: "POST", headers: { Authorization: `Bearer ${token}` } });
+
+export const getCoordinatorApplications = (token) => 
+  request("/api/coord/applications", { headers: { Authorization: `Bearer ${token}` } });
+
+export const approveApplication = (token, id) => 
+  request(`/api/coord/applications/${id}/approve`, { method: "POST", headers: { Authorization: `Bearer ${token}` } });
+
+export const rejectApplication = (token, id) => 
+  request(`/api/coord/applications/${id}/reject`, { method: "POST", headers: { Authorization: `Bearer ${token}` } });
+
+// --- COORDINACIÓN: OFERTAS ---
+export const getCoordOffers = (token) => 
+  request("/api/coord/offers", { headers: { Authorization: `Bearer ${token}` } });
+
+export const createOffer = (token, data) => 
+  request("/api/coord/offers", {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(data),
   });
-}
 
-export async function rejectPracticeRequest(token, id) {
-  return request(`/api/coord/external-requests/${id}/reject`, {
+export const deactivateOffer = (token, id) => 
+  request(`/api/coord/offers/${id}/deactivate`, { method: "POST", headers: { Authorization: `Bearer ${token}` } });
+
+// --- COORDINACIÓN: GESTIÓN DE PERSONAS ---
+export const createStudent = (token, data) => 
+  request("/api/coord/students", {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(data),
   });
-}
 
-//coordinacion: ofertas de practica
-
-export async function createOffer(token, payload) {
-  return request("/api/coord/offers", {
+export const createEvaluator = (token, data) => 
+  request("/api/coord/evaluators", {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },
-    body: JSON.stringify({
-      title: payload.title,
-      company: payload.company,
-      location: payload.location,
-      hours: payload.hours,
-      modality: payload.modality,
-      details: payload.details,
-      deadline: payload.deadline || null,
-      startDate: payload.startDate || null,
-    }),
+    body: JSON.stringify(data),
   });
-}
 
-export async function getCoordOffers(token) {
-  return request("/api/coord/offers", {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-}
+export const getEvaluators = (token) => 
+  request("/api/coord/evaluators", { headers: { Authorization: `Bearer ${token}` } });
 
-export async function deactivateOffer(token, id) {
-  return request(`/api/coord/offers/${id}/deactivate`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
-  });
-}
+// --- COORDINACIÓN: PRÁCTICAS Y ASIGNACIÓN ---
+export const getOpenPractices = (token) => 
+  request("/api/coord/practices/open", { headers: { Authorization: `Bearer ${token}` } });
 
-// coordinacion: postulaciones
-export async function getCoordinatorApplications(token) {
-  return request("/api/coord/applications", {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-}
-
-export async function approveApplication(token, id) {
-  return request(`/api/coord/applications/${id}/approve`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
-  });
-}
-
-export async function rejectApplication(token, id) {
-  return request(`/api/coord/applications/${id}/reject`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
-  });
-}
-
-// coordinacion: crear estudiante
-export async function createStudent(token, payload) {
-  return request("/api/coord/students", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
-    body: JSON.stringify(payload),
-  });
-}
-
-//coordinacion: evaluadores y prácticas
-export async function getEvaluators(token) {
-  return request("/api/coord/evaluators", {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-}
-
-export async function getOpenPractices(token) {
-  return request("/api/coord/practices/open", {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-}
-
-export async function assignEvaluatorToPractice(token, practiceId, evaluatorId) {
-  return request(`/api/coord/practices/${practiceId}/assign`, {
+export const assignEvaluatorToPractice = (token, practiceId, evaluatorId) => 
+  request(`/api/coord/practices/${practiceId}/assign`, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify({ evaluatorId }),
   });
-}
 
-export async function finalizePractice(token, practiceId) {
-  return request(`/api/coord/practices/${practiceId}/close`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
-  });
-}
+export const finalizePractice = (token, practiceId) => 
+  request(`/api/coord/practices/${practiceId}/close`, { method: "POST", headers: { Authorization: `Bearer ${token}` } });

@@ -1,81 +1,115 @@
-import React, { useState } from "react";
-import Login from "./login.jsx";
-import StudentHome from "./StudentHome.jsx";
-import CoordinationHome from "./CoordinationHome.jsx";
+import { useState } from "react";
+import Login from "./Login";
+import StudentHome from "./StudentHome";
+import CoordinationHome from "./CoordinationHome";
+
+// ⛔ MODO PREVIEW DESACTIVADO (usar backend real)
+const PREVIEW_MODE = false;
+
 
 function App() {
   const [user, setUser] = useState(() => {
     try {
-      const saved = localStorage.getItem("user");
-      return saved ? JSON.parse(saved) : null;
+      const savedUser = localStorage.getItem("user");
+      return savedUser ? JSON.parse(savedUser) : null;
     } catch {
       return null;
     }
   });
 
-  const token = (() => {
-    try {
-      return localStorage.getItem("token");
-    } catch {
-      return null;
-    }
-  })();
+  const [token, setToken] = useState(() => {
+    return localStorage.getItem("token");
+  });
 
-  const handleLogin = (loggedUser, tokenFromLogin) => {
-    setUser(loggedUser);
-    if (tokenFromLogin) {
-      localStorage.setItem("token", tokenFromLogin);
-      localStorage.setItem("user", JSON.stringify(loggedUser));
-    }
+  // ===============================
+  // LOGIN
+  // ===============================
+  const handleLogin = (data) => {
+    const { user, token } = data;
+
+    setUser(user);
+    setToken(token);
+
+    localStorage.setItem("user", JSON.stringify(user));
+    localStorage.setItem("token", token);
   };
 
+  // ===============================
+  // LOGOUT
+  // ===============================
   const handleLogout = () => {
-    try {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-    } catch {}
+    localStorage.removeItem("user");
+    localStorage.removeItem("token");
     setUser(null);
+    setToken(null);
   };
 
-  if (!user || !token) {
+  // ===============================
+  // PREVIEW (solo si lo activas)
+  // ===============================
+  const previewUser = {
+    email: "admin@preview.cl",
+    role: "COORDINATION",
+    name: "Admin Preview",
+  };
+  const previewToken = "FAKE_TOKEN";
+
+  const activeUser = PREVIEW_MODE ? previewUser : user;
+  const activeToken = PREVIEW_MODE ? previewToken : token;
+
+  // ===============================
+  // RENDER
+  // ===============================
+
+  // No autenticado
+  if (!activeUser) {
     return <Login onLogin={handleLogin} />;
   }
 
-  if (user.role === "STUDENT") {
+  // Estudiante
+  if (activeUser.role === "STUDENT") {
     return (
       <StudentHome
-        token={token}
-        name={user.name}
+        name={activeUser.name || activeUser.email}
+        token={activeToken}
         onLogout={handleLogout}
       />
     );
   }
 
-  if (user.role === "COORDINATION") {
+  // Coordinación
+  if (activeUser.role === "COORDINATION") {
     return (
       <CoordinationHome
-        token={token}
-        name={user.name}
+        name={activeUser.name || activeUser.email}
+        token={activeToken}
         onLogout={handleLogout}
       />
     );
   }
 
+  // Rol inválido
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50">
-      <div className="bg-white shadow rounded-xl px-8 py-6 text-center">
-        <p className="mb-4 text-slate-700">
-          Rol no soportado en este prototipo.
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+      <div className="bg-white shadow-xl rounded-2xl p-8 max-w-sm w-full text-center border border-slate-100">
+        <div className="bg-amber-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+          <span className="text-2xl text-amber-600">⚠️</span>
+        </div>
+        <h2 className="text-lg font-bold text-slate-900 mb-2">
+          Acceso Restringido
+        </h2>
+        <p className="text-sm text-slate-500 mb-6">
+          Tu rol <strong>{activeUser.role}</strong> no tiene permisos.
         </p>
         <button
           onClick={handleLogout}
-          className="px-4 py-2 rounded-md bg-slate-900 text-white text-sm"
+          className="w-full bg-slate-900 text-white py-2 rounded-lg text-sm font-semibold hover:bg-slate-800"
         >
-          Volver a iniciar sesión
+          Cerrar sesión
         </button>
       </div>
     </div>
   );
 }
 
-export default App;
+export default App;;

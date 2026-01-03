@@ -1,31 +1,22 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { login } from "./api";
 
 export default function Login({ onLogin }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-
-    if (!email || !password) {
-      setError("Debe ingresar correo y contraseña.");
-      return;
-    }
+    setLoading(true);
 
     try {
-      setLoading(true);
       const data = await login(email, password);
-
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data.user));
-
-      onLogin(data.user, data.token);
+      onLogin(data);
     } catch (err) {
-      setError(err.message || "Error al iniciar sesión");
+      setError(err.message || "Credenciales inválidas");
     } finally {
       setLoading(false);
     }
@@ -52,6 +43,7 @@ export default function Login({ onLogin }) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="usuario@uni.cl"
+              required
             />
           </div>
 
@@ -65,6 +57,7 @@ export default function Login({ onLogin }) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="********"
+              required
             />
           </div>
 
@@ -77,7 +70,7 @@ export default function Login({ onLogin }) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 rounded-lg text-sm font-medium bg-slate-900 text-white hover:bg-slate-800 transition"
+            className="w-full py-2.5 rounded-lg text-sm font-medium bg-slate-900 text-white hover:bg-slate-800 transition disabled:opacity-60"
           >
             {loading ? "Ingresando..." : "Iniciar sesión"}
           </button>

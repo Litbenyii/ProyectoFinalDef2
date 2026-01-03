@@ -1,61 +1,42 @@
-const { prisma } = require("../config/prisma");
+const pool = require("../config/db");
 
-//solo ofertas activas
-async function listActiveOffers() {
-  return prisma.offer.findMany({
-    where: { isActive: true },
-    orderBy: { createdAt: "desc" },
-  });
+async function createOffer(data, userId) {
+  // Mapeo: api.js envía 'details', la DB usa 'description'
+  const { title, company, location, hours, modality, details, description } = data;
+  const finalDescription = details || description;
+
+  if (!title || !company || !finalDescription) {
+    throw new Error("Faltan campos obligatorios");
+  }
+
+  const result = await pool.query(
+    `INSERT INTO offers (title, company, location, hours, modality, description, created_by)
+     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+    [title, company, location, hours || 0, modality, finalDescription, userId]
+  );
+  return result.rows[0];
 }
 
-//lista de ofertas
 async function listAllOffers() {
-  return prisma.offer.findMany({
-    orderBy: { createdAt: "desc" },
-  });
+  const res = await pool.query(`
+    SELECT *
+    FROM offers
+    ORDER BY created_at DESC
+  `);
+  return res.rows;
 }
 
-//crear oferta
-async function createOffer(data) {
-  const {
-    title,
-    company,
-    location,
-    hours,
-    modality,
-    details,
-    deadline,
-    startDate,
-  } = data;
-
-  const offer = await prisma.offer.create({
-    data: {
-      title,
-      company,
-      location,
-      hours,
-      modality,
-      details,
-      deadline: deadline ? new Date(deadline) : null,
-      startDate: startDate ? new Date(startDate) : null,
-      isActive: true,
-    },
-  });
-
-  return offer;
+async function listActiveOffers() {
+  const res = await pool.query(`
+    SELECT *
+    FROM offers
+    ORDER BY created_at DESC
+  `);
+  return res.rows;
 }
 
-//desactivar oferta
 async function deactivateOffer(id) {
-  return prisma.offer.update({
-    where: { id },
-    data: { isActive: false },
-  });
+  return await pool.query("DELETE FROM offers WHERE id = $1", [id]);
 }
 
-module.exports = {
-  listActiveOffers,
-  listAllOffers,
-  createOffer,
-  deactivateOffer,
-};
+module.exports = { createOffer, listAllOffers, deactivateOffer, listActiveOffers };

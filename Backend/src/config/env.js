@@ -8,8 +8,4 @@ const config = {
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || "8h",
 };
 
-if (!config.DATABASE_URL) {
-  console.warn("[ENV] Falta DATABASE_URL en .env");
-}
-
 module.exports = config;

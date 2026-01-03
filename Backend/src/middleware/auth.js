@@ -1,6 +1,6 @@
 const { verifyToken } = require("../services/auth.service");
 
-async function authMiddleware(req, res, next) {
+function authMiddleware(req, res, next) {
   try {
     const authHeader = req.headers.authorization;
 
@@ -9,14 +9,12 @@ async function authMiddleware(req, res, next) {
     }
 
     const token = authHeader.split(" ")[1];
-
-    const decoded = await verifyToken(token);
+    const decoded = verifyToken(token);
 
     req.user = {
       id: decoded.userId,
-      role: decoded.role,
       email: decoded.email,
-      name: decoded.name,
+      role: decoded.role,
     };
 
     next();
@@ -26,29 +24,37 @@ async function authMiddleware(req, res, next) {
   }
 }
 
-//solo coordinador
+// ✅ SOLO COORDINACIÓN
 function requireCoordination(req, res, next) {
   if (!req.user) {
     return res.status(401).json({ message: "No autenticado" });
   }
-  if (req.user.role !== "COORDINATION") {
-    return res
-      .status(403)
-      .json({ message: "Acceso restringido a coordinación" });
+
+  const role = (req.user.role || "").toUpperCase();
+
+  if (role !== "COORDINATION") {
+    return res.status(403).json({
+      message: "Acceso restringido a coordinación",
+    });
   }
+
   next();
 }
 
-//solo estaudiante
+// ✅ SOLO ESTUDIANTE
 function requireStudent(req, res, next) {
   if (!req.user) {
     return res.status(401).json({ message: "No autenticado" });
   }
-  if (req.user.role !== "STUDENT") {
-    return res
-      .status(403)
-      .json({ message: "Acceso restringido a estudiantes" });
+
+  const role = (req.user.role || "").toUpperCase();
+
+  if (role !== "STUDENT") {
+    return res.status(403).json({
+      message: "Acceso restringido a estudiantes",
+    });
   }
+
   next();
 }
 

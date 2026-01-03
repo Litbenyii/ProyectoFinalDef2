@@ -1,59 +1,52 @@
-const bcrypt = require("bcryptjs");
+const db = require("../config/db");
+const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const { prisma } = require("../config/prisma");
-const config = require("../config/env");
 
+/**
+ * LOGIN
+ */
 async function login(email, password) {
-  const user = await prisma.user.findUnique({
-    where: { email },
-    include: {
-      student: true,
+  const result = await db.query(
+    "SELECT id, email, password, role FROM users WHERE email = $1",
+    [email]
+  );
+
+  if (result.rows.length === 0) {
+    throw new Error("Credenciales inválidas");
+  }
+
+  const user = result.rows[0];
+
+  const valid = await bcrypt.compare(password, user.password);
+  if (!valid) {
+    throw new Error("Credenciales inválidas");
+  }
+
+  const token = jwt.sign(
+    {
+      userId: user.id,
+      email: user.email,
+      role: user.role,
     },
-  });
+    process.env.JWT_SECRET,
+    { expiresIn: "8h" }
+  );
 
-  if (!user) {
-    throw new Error("Credenciales inválidas");
-  }
-
-  const isValid = await bcrypt.compare(password, user.password);
-  if (!isValid) {
-    throw new Error("Credenciales inválidas");
-  }
-
-  const payload = {
-    userId: user.id,
-    role: user.role,
-    email: user.email,
-    name: user.name,
+  return {
+    token,
+    user: {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+    },
   };
-
-  const token = jwt.sign(payload, config.JWT_SECRET, {
-    expiresIn: config.JWT_EXPIRES_IN,
-  });
-
-  const baseUser = {
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    role: user.role,
-  };
-
-  if (user.role === "STUDENT" && user.student) {
-    baseUser.studentId = user.student.id;
-    baseUser.rut = user.student.rut;
-    baseUser.career = user.student.career;
-  }
-
-  return { token, user: baseUser };
 }
 
+/**
+ * VERIFY TOKEN (🔥 ESTA ERA LA FUNCIÓN FALTANTE)
+ */
 function verifyToken(token) {
-  return new Promise((resolve, reject) => {
-    jwt.verify(token, config.JWT_SECRET, (err, decoded) => {
-      if (err) return reject(err);
-      resolve(decoded);
-    });
-  });
+  return jwt.verify(token, process.env.JWT_SECRET);
 }
 
 module.exports = {
