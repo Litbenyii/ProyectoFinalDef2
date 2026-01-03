@@ -35,15 +35,26 @@ async function createApplication(studentId, offerId) {
 
 // Obtener solicitudes del alumno
 async function getMyRequests(studentId) {
-  const internal = await pool.query(
+  const result = await pool.query(
     `
     SELECT
-      a.id,
-      'INTERNAL' AS type,
-      o.title AS "offerTitle",
+      pr.id AS request_id,
+      pr.company,
+      pr.status,
+      'EXTERNAL' AS type,
+      p.id AS practice_id
+    FROM practice_requests pr
+    LEFT JOIN practices p ON p.practice_request_id = pr.id
+    WHERE pr.student_id = $1
+
+    UNION ALL
+
+    SELECT
+      a.id AS request_id,
       o.company,
       a.status,
-      a.created_at
+      'INTERNAL' AS type,
+      NULL AS practice_id
     FROM applications a
     JOIN offers o ON a.offer_id = o.id
     WHERE a.student_id = $1
@@ -51,23 +62,7 @@ async function getMyRequests(studentId) {
     [studentId]
   );
 
-  const external = await pool.query(
-    `
-    SELECT
-      pr.id,
-      'EXTERNAL' AS type,
-      pr.company,
-      pr.status,
-      pr.created_at
-    FROM practice_requests pr
-    WHERE pr.student_id = $1
-    `,
-    [studentId]
-  );
-
-  return [...internal.rows, ...external.rows].sort(
-    (a, b) => new Date(b.created_at) - new Date(a.created_at)
-  );
+  return result.rows;
 }
 
 // Coordinación: ver postulaciones internas

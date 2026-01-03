@@ -35,8 +35,7 @@ export default function StudentHome({ name, onLogout, token }) {
     try {
       setLoading(true);
       setError("");
-      setMsg("");
-
+      
       const [offersData, requestsData] = await Promise.all([
         getOffers(token),
         getMyRequests(token),
@@ -125,6 +124,7 @@ export default function StudentHome({ name, onLogout, token }) {
       setError("Por favor, selecciona un archivo primero.");
       return;
     }
+
     setError("");
     setMsg("");
     setUploadingId(practiceId);
@@ -135,20 +135,29 @@ export default function StudentHome({ name, onLogout, token }) {
     formData.append("description", logbookDesc);
 
     try {
-      // Usamos fetch directamente para manejar el multipart/form-data con el token
-      const response = await fetch("http://localhost:4000/api/student/my/logbooks", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${token}`
-        },
-        body: formData,
-      });
+      const response = await fetch(
+        "http://localhost:4000/api/student/my/logbooks",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        }
+      );
 
-      if (!response.ok) throw new Error("Error al subir la bitácora.");
+      // 🔥 LEER RESPUESTA
+      const data = await response.json();
 
-      setMsg("Bitácora subida con éxito.");
+      if (!response.ok) {
+        throw new Error(data.message || "Error al subir la bitácora");
+      }
+
+      // ✅ AQUÍ ESTABA EL PROBLEMA
+      setMsg(data.message || "Bitácora subida con éxito");
       setLogbookFile(null);
       setLogbookDesc("");
+
       await loadData();
     } catch (err) {
       setError(err.message);
@@ -156,6 +165,7 @@ export default function StudentHome({ name, onLogout, token }) {
       setUploadingId(null);
     }
   };
+
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -373,8 +383,8 @@ export default function StudentHome({ name, onLogout, token }) {
                       </div>
                       
                       <button
-                        onClick={() => handleLogbookUpload(r.id)}
-                        disabled={uploadingId === r.id}
+                        onClick={() => handleLogbookUpload(r.practice_id)}
+                        disabled={!r.practice_id || uploadingId === r.practice_id}
                         className="w-full sm:w-auto bg-emerald-600 text-white px-6 py-2 rounded text-xs font-bold hover:bg-emerald-700 disabled:opacity-50 transition-colors"
                       >
                         {uploadingId === r.id ? "Subiendo..." : "Enviar Bitácora"}

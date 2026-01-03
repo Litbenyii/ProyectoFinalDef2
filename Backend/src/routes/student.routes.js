@@ -39,6 +39,15 @@ router.post("/my/logbooks", upload.single("logbook"), async (req, res) => {
       return res.status(404).json({ message: "Estudiante no encontrado" });
     }
 
+    const practiceCheck = await pool.query(
+      "SELECT id FROM practices WHERE id = $1",
+      [practiceId]
+    );
+
+    if (practiceCheck.rows.length === 0) {
+      return res.status(400).json({ message: "Práctica no válida" });
+    }
+
     await pool.query(
       `
       INSERT INTO logbooks (student_id, practice_id, file_path, description)
