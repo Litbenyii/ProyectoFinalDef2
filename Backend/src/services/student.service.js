@@ -42,6 +42,36 @@ async function createStudent(data) {
   };
 }
 
+async function hasActivePractice(studentId) {
+  // Si existe una práctica del estudiante que NO esté finalizada, se considera activa
+  // (ajusta el WHERE si tú tienes un campo status; si no, usamos end_date como fin)
+  const r = await pool.query(
+    `
+    SELECT 1
+    FROM practices
+    WHERE student_id = $1
+      AND (end_date IS NULL)
+    LIMIT 1
+    `,
+    [studentId]
+  );
+  return r.rows.length > 0;
+}
+
+async function hasPendingExternalRequest(studentId) {
+  const r = await pool.query(
+    `
+    SELECT 1
+    FROM practice_requests
+    WHERE student_id = $1
+      AND status = 'Pendiente'
+    LIMIT 1
+    `,
+    [studentId]
+  );
+  return r.rows.length > 0;
+}
+
 async function getStudentByUserId(userId) {
   const res = await pool.query(
     "SELECT * FROM students WHERE user_id = $1",
@@ -53,4 +83,6 @@ async function getStudentByUserId(userId) {
 module.exports = {
   createStudent,
   getStudentByUserId,
+  hasActivePractice,
+  hasPendingExternalRequest,
 };

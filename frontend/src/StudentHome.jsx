@@ -258,7 +258,7 @@ export default function StudentHome({ name, onLogout, token }) {
               />
               <input
                 name="tutorName"
-                placeholder="Tutor"
+                placeholder="Supervisor"
                 value={practiceForm.tutorName}
                 onChange={handlePracticeChange}
                 className="w-full border p-2 rounded text-sm"
@@ -266,7 +266,7 @@ export default function StudentHome({ name, onLogout, token }) {
               <input
                 name="tutorEmail"
                 type="email"
-                placeholder="Correo tutor"
+                placeholder="Correo Supervisor"
                 value={practiceForm.tutorEmail}
                 onChange={handlePracticeChange}
                 className="w-full border p-2 rounded text-sm"
