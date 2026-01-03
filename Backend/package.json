@@ -4,10 +4,7 @@
   "description": "API de gestión de prácticas UBB (Express + Prisma)",
   "main": "src/index.js",
   "scripts": {
-    "dev": "node src/index.js",
-    "seed": "node prisma/seed.cjs",
-    "prisma:migrate": "npx prisma migrate dev",
-    "prisma:studio": "npx prisma studio"
+    "dev": "node src/index.js"
   },
   "keywords": [],
   "author": "",
