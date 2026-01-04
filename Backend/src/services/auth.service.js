@@ -30,7 +30,7 @@ async function login(email, password) {
       email: user.email,
       role: user.role,
     },
-    process.env.ACCESS_TOKEN_SECRET,
+    process.env.JWT_SECRET,
     { expiresIn: "8h" }
   );
 
@@ -46,7 +46,7 @@ async function login(email, password) {
 
 //VERIFY TOKEN
 function verifyToken(token) {
-  return jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+  return jwt.verify(token, process.env.JWT_SECRET);
 }
 
 module.exports = {
